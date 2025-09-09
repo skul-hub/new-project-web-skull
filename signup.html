@@ -1,41 +1,41 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up - STORESKULL</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.supabase.com/v0.99.7/supabase.min.js"></script>
-    <script src="config.js"></script>
-    <script src="signup.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up - STORESKULL</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="signup.js" defer></script>
 </head>
 <body>
-    <header>
-        <nav class="navbar">
-            <div class="navbar-brand">
-                <h1><a href="index.html">STORESKULL</a></h1>
-            </div>
-        </nav>
-    </header>
+  <header>
+    <nav class="navbar">
+      <div class="navbar-brand">
+        <h1><a href="index.html">STORESKULL</a></h1>
+      </div>
+    </nav>
+  </header>
 
-    <main class="form-container">
-        <form id="signupForm" class="form">
-            <h2>Sign Up</h2>
-            <label for="username">Username:</label>
-            <input type="text" id="username" required>
-            <label for="email">Email:</label>
-            <input type="email" id="email" required>
-            <label for="password">Password:</label>
-            <input type="password" id="password" required>
-            <label for="whatsapp">WhatsApp:</label>
-            <input type="tel" id="whatsapp" required>
-            <button type="submit">Sign Up</button>
-            <p>Already have an account? <a href="signin.html">Sign In</a></p>
-        </form>
-    </main>
+  <main class="form-container">
+    <form id="signupForm" class="form">
+      <h2>Sign Up</h2>
+      <label>Username:</label>
+      <input type="text" id="username" required>
+      <label>Email:</label>
+      <input type="email" id="email" required>
+      <label>Password:</label>
+      <input type="password" id="password" required>
+      <label>WhatsApp:</label>
+      <input type="tel" id="whatsapp" required>
+      <button type="submit">Sign Up</button>
+      <p>Already have an account? <a href="signin.html">Sign In</a></p>
+    </form>
+  </main>
 
-    <footer>
-        <p>&copy; 2025 SKULLHOSTING - STORESKULLHOSTING</p>
-    </footer>
+  <footer>
+    <p>&copy; 2025 SKULLHOSTING - STORESKULLHOSTING</p>
+  </footer>
 </body>
 </html>
