@@ -19,7 +19,10 @@ document.getElementById('signupForm').addEventListener('submit', async (e) => {
     }
 
     if (data.user) {
-        // 2. Simpan profil ke tabel public.users
+        // Refresh session supaya auth.uid() kebaca
+        await window.supabase.auth.getSession();
+
+        // 2. Insert profil ke tabel public.users
         const { error: dbError } = await window.supabase.from('users').insert([{
             id: data.user.id,
             username: username,
@@ -28,22 +31,16 @@ document.getElementById('signupForm').addEventListener('submit', async (e) => {
         }]);
 
         if (dbError) {
-            alert('Sign up berhasil, tapi gagal menyimpan profil: ' + dbError.message);
-            console.error('Sign up DB insert error:', dbError);
-            await window.supabase.auth.signOut(); // logout supaya tidak nyangkut
+            alert('Sign up berhasil, tapi gagal simpan profil: ' + dbError.message);
+            console.error('DB insert error:', dbError);
+            await window.supabase.auth.signOut();
             return;
         }
 
-        // 3. Tangani konfirmasi email
-        if (!data.user.confirmed_at) {
-            alert('Sign up berhasil! Silakan cek email Anda untuk konfirmasi sebelum login.');
-            // Tetap redirect ke signin agar user bisa login setelah confirm email
-            window.location.href = 'signin.html';
-        } else {
-            alert('Sign up berhasil! Anda bisa langsung login.');
-            window.location.href = 'signin.html';
-        }
+        // 3. Berhasil
+        alert('Sign up berhasil! Silakan login.');
+        window.location.href = 'signin.html';
     } else {
-        alert('Sign up gagal: Email mungkin sudah terdaftar atau ada masalah lain.');
+        alert('Sign up gagal: Email mungkin sudah terdaftar.');
     }
 });
