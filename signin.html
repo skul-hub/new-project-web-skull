@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - STORESKULL</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.supabase.com/v0.99.7/supabase.min.js"></script>
+    <script src="config.js"></script>
+    <script src="signin.js"></script>
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="navbar-brand">
+                <h1><a href="index.html">STORESKULL</a></h1>
+            </div>
+        </nav>
+    </header>
+
+    <main class="form-container">
+        <form id="signinForm" class="form">
+            <h2>Sign In</h2>
+            <label for="email">Email:</label>
+            <input type="email" id="email" required>
+            <label for="password">Password:</label>
+            <input type="password" id="password" required>
+            <button type="submit">Sign In</button>
+            <p>Admin: email 'admin@example.com', password 'admin123'</p>
+            <p>Don't have an account? <a href="signup.html">Sign Up</a></p>
+        </form>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 SKULLHOSTING - STORESKULLHOSTING</p>
+    </footer>
+</body>
+</html>
