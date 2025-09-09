@@ -1,9 +1,6 @@
-// Supabase Config
-// Ganti dengan URL Supabase Anda
+// config.js
 const supabaseUrl = 'https://dvnfqoektrgarlplkkaj.supabase.co'; 
-// Ganti dengan Anon Key Anda
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR2bmZxb2VrdHJnYXJscGxra2FqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxMDI2MzksImV4cCI6MjA3MjY3ODYzOX0.c_T4297HqKGo3KZYvWM6qXkiw4saE548Cp-UH7qZ7Ts'; 
+const supabaseKey = 'YOUR_SUPABASE_ANON_KEY'; // ganti dengan anon key dari Supabase
 
-// Inisialisasi Supabase client
-window.supabase = supabase.createClient(supabaseUrl, supabaseKey);
-
+const { createClient } = supabase;
+window.supabase = createClient(supabaseUrl, supabaseKey);
