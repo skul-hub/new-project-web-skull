@@ -2,15 +2,35 @@
 let cart = [];
 let currentUser = null;
 
-window.supabase.auth.onAuthStateChange((event, session) => {
-    if (!session) {
-        window.location.href = 'signin.html';
-    } else {
-        currentUser = session.user;
-        // Panggil showSection untuk menampilkan bagian produk secara default
-        showSection('products'); // Ini akan memicu loadProducts()
+// Fungsi untuk memeriksa autentikasi dan memuat data user
+async function checkUserAuth() {
+    const { data: { user }, error: authError } = await window.supabase.auth.getUser();
+
+    if (authError || !user) {
+        console.error("User not authenticated or error fetching user:", authError);
+        window.location.href = 'signin.html'; // Redirect if not logged in
+        return;
     }
-});
+
+    // Ambil data profil user dari tabel public.users
+    const { data: userData, error: userError } = await window.supabase
+        .from('users')
+        .select('*') // Ambil semua kolom, termasuk role jika diperlukan di masa depan
+        .eq('id', user.id)
+        .single();
+
+    if (userError || !userData) {
+        console.error("Error fetching user profile:", userError);
+        alert('Gagal memuat profil pengguna. Silakan coba login kembali.');
+        await window.supabase.auth.signOut(); // Logout jika profil tidak ditemukan
+        window.location.href = 'signin.html';
+        return;
+    }
+
+    currentUser = userData; // Set currentUser dengan data dari tabel public.users
+    console.log("User logged in:", currentUser);
+    showSection('products'); // Tampilkan bagian produk secara default
+}
 
 async function loadProducts() {
     const { data, error } = await window.supabase.from('products').select('*');
@@ -20,18 +40,22 @@ async function loadProducts() {
     }
     const container = document.getElementById('productsContainer');
     container.innerHTML = '';
-    data.forEach(product => {
-        const div = document.createElement('div');
-        div.className = 'product';
-        div.innerHTML = `
-            <h3>${product.name}</h3>
-            <p>Rp ${product.price.toLocaleString()}</p>
-            <img src="${product.image}" alt="${product.name}" style="width:150px; height:150px;">
-            <button onclick="addToCart(${product.id}, '${product.name}', ${product.price})">Tambah ke Cart</button>
-            <button onclick="buyNow(${product.id}, '${product.name}', ${product.price})">Buy Sekarang</button>
-        `;
-        container.appendChild(div);
-    });
+    if (data && data.length > 0) {
+        data.forEach(product => {
+            const div = document.createElement('div');
+            div.className = 'product';
+            div.innerHTML = `
+                <h3>${product.name}</h3>
+                <p>Rp ${product.price.toLocaleString()}</p>
+                <img src="${product.image}" alt="${product.name}" style="width:150px; height:150px;">
+                <button onclick="addToCart(${product.id}, '${product.name}', ${product.price})">Tambah ke Cart</button>
+                <button onclick="buyNow(${product.id}, '${product.name}', ${product.price})">Buy Sekarang</button>
+            `;
+            container.appendChild(div);
+        });
+    } else {
+        container.innerHTML = '<p>Tidak ada produk yang tersedia.</p>';
+    }
 }
 
 function addToCart(id, name, price) {
@@ -42,51 +66,99 @@ function addToCart(id, name, price) {
 
 function updateCartDisplay() {
     const total = cart.reduce((sum, p) => sum + p.price, 0);
-    document.getElementById('cartItems').innerHTML = cart.map(p => `<p>${p.name} - Rp ${p.price.toLocaleString()}</p>`).join('');
-    document.getElementById('cartItems').innerHTML += `<p><strong>Total: Rp ${total.toLocaleString()}</strong></p>`;
+    const cartItemsDiv = document.getElementById('cartItems');
+    cartItemsDiv.innerHTML = ''; // Clear previous items
+
+    if (cart.length === 0) {
+        cartItemsDiv.innerHTML = '<p>Keranjang Anda kosong.</p>';
+    } else {
+        cart.forEach(p => {
+            const itemP = document.createElement('p');
+            itemP.textContent = `${p.name} - Rp ${p.price.toLocaleString()}`;
+            cartItemsDiv.appendChild(itemP);
+        });
+        const totalP = document.createElement('p');
+        totalP.innerHTML = `<strong>Total: Rp ${total.toLocaleString()}</strong>`;
+        cartItemsDiv.appendChild(totalP);
+    }
 }
 
 async function buyNow(pId, name, price) {
-    const whatsapp = prompt('Masukkan nomor WhatsApp Anda:');
-    if (!whatsapp) {
-        alert('WhatsApp wajib!');
+    if (!currentUser) {
+        alert('Silakan login untuk melakukan pembelian.');
+        window.location.href = 'signin.html';
         return;
     }
+
+    const whatsapp = prompt('Masukkan nomor WhatsApp Anda:');
+    if (!whatsapp) {
+        alert('Nomor WhatsApp wajib diisi untuk pesanan.');
+        return;
+    }
+
     const { error } = await window.supabase.from('orders').insert([{
         product_id: pId,
         user_id: currentUser.id,
-        username: currentUser.email,
-        whatsapp,
+        username: currentUser.username, // Gunakan username dari tabel public.users
+        whatsapp: whatsapp,
         status: 'pending'
     }]);
-    if (error) alert('Error: ' + error.message);
-    else {
-        alert('Pesanan dibuat! Admin akan hubungi.');
+
+    if (error) {
+        alert('Error creating order: ' + error.message);
+        console.error('Order creation error:', error);
+    } else {
+        alert('Pesanan dibuat! Admin akan segera menghubungi Anda.');
         loadHistory(); // Muat ulang riwayat setelah pesanan baru dibuat
     }
 }
 
 async function checkout() {
-    if (cart.length === 0) return alert('Cart kosong!');
+    if (cart.length === 0) {
+        alert('Keranjang Anda kosong!');
+        return;
+    }
+
+    if (!currentUser) {
+        alert('Silakan login untuk melakukan checkout.');
+        window.location.href = 'signin.html';
+        return;
+    }
+
     const whatsapp = prompt('Masukkan nomor WhatsApp Anda:');
-    if (!whatsapp) return;
+    if (!whatsapp) {
+        alert('Nomor WhatsApp wajib diisi untuk checkout.');
+        return;
+    }
+
+    let allOrdersSuccessful = true;
     for (const p of cart) {
-        await window.supabase.from('orders').insert([{
+        const { error } = await window.supabase.from('orders').insert([{
             product_id: p.id,
             user_id: currentUser.id,
-            username: currentUser.email,
-            whatsapp,
+            username: currentUser.username, // Gunakan username dari tabel public.users
+            whatsapp: whatsapp,
             status: 'pending'
         }]);
+        if (error) {
+            console.error('Error inserting order for product ' + p.name + ':', error.message);
+            allOrdersSuccessful = false;
+            // Lanjutkan meskipun ada error untuk produk lain, atau bisa juga break
+        }
     }
-    cart = [];
-    updateCartDisplay();
-    alert('Checkout berhasil!');
-    loadHistory(); // Muat ulang riwayat setelah checkout
+
+    if (allOrdersSuccessful) {
+        cart = []; // Kosongkan keranjang
+        updateCartDisplay();
+        alert('Checkout berhasil! Admin akan segera menghubungi Anda.');
+        loadHistory(); // Muat ulang riwayat setelah checkout
+    } else {
+        alert('Checkout selesai, namun ada beberapa pesanan yang gagal dibuat. Silakan cek riwayat pesanan Anda.');
+    }
 }
 
 async function loadHistory() {
-    if (!currentUser) { // Pastikan currentUser sudah ada sebelum memuat riwayat
+    if (!currentUser) {
         console.warn("currentUser not set, cannot load history.");
         return;
     }
@@ -95,25 +167,32 @@ async function loadHistory() {
         console.error('Error loading history:', error);
         return;
     }
-    document.getElementById('historyItems').innerHTML = data.map(o => `
-        <div class="order">
-            <p><strong>Produk ID:</strong> ${o.product_id}</p>
-            <p><strong>Status:</strong> ${o.status}</p>
-            <p><strong>WhatsApp:</strong> ${o.whatsapp}</p>
-        </div>
-    `).join('');
+    const historyItemsDiv = document.getElementById('historyItems');
+    historyItemsDiv.innerHTML = ''; // Clear previous items
+
+    if (data && data.length > 0) {
+        data.forEach(o => {
+            const div = document.createElement('div');
+            div.className = 'order';
+            div.innerHTML = `
+                <p><strong>Produk ID:</strong> ${o.product_id}</p>
+                <p><strong>Status:</strong> ${o.status}</p>
+                <p><strong>WhatsApp:</strong> ${o.whatsapp}</p>
+            `;
+            historyItemsDiv.appendChild(div);
+        });
+    } else {
+        historyItemsDiv.innerHTML = '<p>Anda belum memiliki riwayat pesanan.</p>';
+    }
 }
 
 function showSection(section) {
-    // Menyembunyikan semua bagian terlebih dahulu
     document.getElementById('products').style.display = 'none';
     document.getElementById('cart').style.display = 'none';
     document.getElementById('history').style.display = 'none';
 
-    // Menampilkan bagian yang dipilih
     document.getElementById(section).style.display = 'block';
 
-    // Memuat data yang relevan saat bagian ditampilkan
     if (section === 'products') {
         loadProducts();
     } else if (section === 'cart') {
@@ -123,7 +202,16 @@ function showSection(section) {
     }
 }
 
-function logout() {
-    window.supabase.auth.signOut();
-    // Pengalihan ke signin.html akan ditangani oleh onAuthStateChange listener
+window.onload = () => {
+    checkUserAuth(); // Panggil fungsi ini saat halaman dimuat
+};
+
+async function logout() {
+    const { error } = await window.supabase.auth.signOut();
+    if (error) {
+        console.error('Logout error:', error.message);
+        alert('Gagal logout: ' + error.message);
+    } else {
+        window.location.href = 'signin.html';
+    }
 }
