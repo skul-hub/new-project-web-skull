@@ -3,46 +3,41 @@ function showAuth() {
     window.location.href = 'signin.html';
 }
 
-window.onload = () => {
-    // Initialize Supabase client if not already done (though config.js should handle this)
+window.onload = async () => {
     if (!window.supabase) {
         console.error("Supabase client not initialized. Make sure config.js is loaded correctly.");
-        // Potentially redirect to a setup page or show an error
         return;
     }
 
-    window.supabase.auth.onAuthStateChange((event, session) => {
-        console.log('Auth state changed:', event, session); // For debugging
+    // Cek status autentikasi saat halaman dimuat
+    const { data: { user }, error: authError } = await window.supabase.auth.getUser();
 
-        if (session) {
-            // User is logged in
-            // Check if the user is an admin based on stored role
-            if (localStorage.getItem('role') === 'admin') {
-                window.location.href = 'admin-dashboard.html';
-            } else {
-                window.location.href = 'user-dashboard.html';
-            }
+    if (authError) {
+        console.error("Error getting user session:", authError);
+        // Biarkan di halaman index jika ada error atau tidak ada user
+        return;
+    }
+
+    if (user) {
+        // Jika user login, cek rolenya dari tabel public.users
+        const { data: userData, error: userError } = await window.supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+
+        if (userError) {
+            console.error("Error fetching user role:", userError);
+            // Biarkan di halaman index atau redirect ke signin jika data user tidak ditemukan
+            window.location.href = 'signin.html';
+            return;
+        }
+
+        if (userData && userData.role === 'admin') {
+            window.location.href = 'admin-dashboard.html';
         } else {
-            // User is not logged in or logged out
-            // If they were previously an admin, clear the role
-            if (localStorage.getItem('role') === 'admin') {
-                localStorage.removeItem('role');
-            }
-            // No redirection here, as this is the public index page
+            window.location.href = 'user-dashboard.html';
         }
-    });
-
-    // Initial check in case the auth state change event doesn't fire immediately on page load
-    // This is useful if the user is already logged in and directly types the index.html URL
-    window.supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-            if (localStorage.getItem('role') === 'admin') {
-                window.location.href = 'admin-dashboard.html';
-            } else {
-                window.location.href = 'user-dashboard.html';
-            }
-        }
-    }).catch(error => {
-        console.error("Error getting session:", error);
-    });
+    }
+    // Jika tidak ada user, tetap di halaman index
 };
